@@ -48,7 +48,7 @@ WHILE @@FETCH_STATUS=0
 BEGIN
 PRINT @nearestpostcode+','+@nearestsuburb;
 
---update PublicTransport SET suburb=@nearestsuburb, postcode=@nearestpostcode WHERE current of station_cursor;
+UPDATE PublicTransport SET suburb=@nearestsuburb, postcode=@nearestpostcode WHERE current of station_cursor;
 FETCH NEXT FROM nearestSub_cursor INTO @nearestpostcode,@nearestsuburb ;
 END;
 CLOSE nearestSub_cursor;
