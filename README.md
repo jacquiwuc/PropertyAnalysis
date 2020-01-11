@@ -3,6 +3,10 @@
 Summary:
 A cloud-based property investment and management platform we are creating to link property data between AU and NZ.
 
+Technology: SQL, SSIS, Power BI, SSRS
+
+Development methodology: Agile Methodology
+
 Outcome:
 
 1 Standardize the dataset, trasform data from multiple data sources, ensure the accuracy and intergrity of relevant datasets
