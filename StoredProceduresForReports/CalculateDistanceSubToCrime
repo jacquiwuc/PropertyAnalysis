@@ -1,0 +1,55 @@
+USE [PropertyDW_Advanced]
+GO
+
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+
+ALTER proc [dbo].[CalculateDistanceSubToCrime]
+AS 
+begin
+
+declare @GeoAltKey int;
+declare @fromsuburb nvarchar(50);
+declare @fromsuburblat float;
+declare @fromsuburblong float;
+declare @GeoDistance geography;
+declare FromSuburb_Cursor cursor for select distinct 
+g.geographyAltkey,g.Suburb,g.Latitude,g.Longitude
+from DimGeography g order by g.GeographyAltKey;
+
+open FromSuburb_Cursor;
+Fetch Next From FromSuburb_Cursor into @GeoAltKey, @fromsuburb, @fromsuburblat,@fromsuburblong;
+while @@FETCH_STATUS=0
+   begin
+   set @GeoDistance=Geography::Point(@fromsuburblat,@fromsuburblong,4326);
+
+Declare @CrimeAltKey int;
+declare @Suburb nvarchar(50);
+declare @Incidents int;
+declare @nearestdistance float;
+declare Crime_Cursor cursor for select distinct 
+  c.CrimeAltKey,c.Suburb,fc.Incidents,
+(@GeoDistance.STDistance(geography::Point(ISNULL(c.Latitude,0),ISNULL(c.Longitude,0),4326)))/1000 AS distance
+FROM DimCrime c inner join DimGeography g on c.Suburbid=g.SuburbId
+inner join FactCrimeByYear fc on fc.GeographyAltKey=g.GeographyAltKey
+Where (@GeoDistance.STDistance(geography::Point(ISNULL(c.Latitude,0),ISNULL(c.Longitude,0),4326)))/1000>0 AND
+(@GeoDistance.STDistance(geography::Point(ISNULL(c.Latitude,0),ISNULL(c.Longitude,0),4326)))/1000<=1
+
+OPEN Crime_Cursor;
+Fetch Next from Crime_Cursor into @CrimeAltKey, @Suburb, @Incidents, @nearestdistance;
+while @@FETCH_STATUS=0
+  Begin
+     insert into CrimeDistance(Fromsuburbid,FromsuburbName,Tosuburbid,Tosuburbname,Incidents,Distance)
+     values (@GeoAltKey,@fromsuburb,@CrimeAltKey,@Suburb,@Incidents,@nearestdistance);
+     Fetch Next from Crime_Cursor into @CrimeAltKey,@Suburb, @Incidents, @nearestdistance;
+  END;
+Close Crime_Cursor;
+Deallocate Crime_Cursor;
+    Fetch Next From FromSuburb_Cursor into @GeoAltKey, @fromsuburb, @fromsuburblat,@fromsuburblong;
+END;
+Close FromSuburb_Cursor;
+Deallocate FromSuburb_Cursor;
+END
+
