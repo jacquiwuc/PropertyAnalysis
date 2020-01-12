@@ -1,0 +1,55 @@
+USE [PropertyDW_Advanced]
+GO
+
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+
+ALTER PROC [dbo].[CalculateDistanceSubToRental]
+AS 
+BEGIN
+
+DECLARE @GeoAltKey int;
+DECLARE @fromsuburb nvarchar(50);
+DECLARE @fromsuburblat float;
+DECLARE @fromsuburblong float;
+DECLARE @GeoDistance geography;
+DECLARE FromSuburb_Cursor CURSOR FOR SELECT DISTINCT 
+dg.geographyAltkey,dg.Suburb,dg.Latitude,dg.Longitude
+FROM DimGeography dg ORDER BY dg.GeographyAltKey;
+
+OPEN FromSuburb_Cursor;
+FETCH NEXT FROM FromSuburb_Cursor INTO @GeoAltKey, @fromsuburb, @fromsuburblat,@fromsuburblong;
+WHILE @@FETCH_STATUS=0
+   BEGIN
+   SET @GeoDistance=Geography::Point(@fromsuburblat,@fromsuburblong,4326);
+
+DECLARE @RentalMedianAltKey int;
+DECLARE @Suburb nvarchar(50);
+DECLARE @RentValue nvarchar(50);
+DECLARE @nearestdistance float;
+DECLARE Rental_Cursor CURSOR FOR SELECT DISTINCT 
+  rm.RentalMedianAltKey,rm.Suburb,fs.RentalValue,
+(@GeoDistance.STDistance(geography::Point(ISNULL(rm.Latitude,0),ISNULL(rm.Longitude,0),4326)))/1000 AS distance
+FROM DimRentalMedian rm inner join DimGeography dg ON rm.Suburbid=dg.SuburbId
+INNER JOIN FactSuburbRentalMedian fs on fs.GeographyAltKey=dg.GeographyAltKey
+WHERE (@GeoDistance.STDistance(geography::Point(ISNULL(rm.Latitude,0),ISNULL(rm.Longitude,0),4326)))/1000>0 AND
+(@GeoDistance.STDistance(geography::Point(ISNULL(rm.Latitude,0),ISNULL(rm.Longitude,0),4326)))/1000<=1
+
+OPEN Rental_Cursor;
+FETCH NEXT FROM Rental_Cursor INTO @RentalMedianAltKey, @Suburb, @RentValue, @nearestdistance;
+WHILE @@FETCH_STATUS=0
+  BEGIN
+     INSERT INTO RentalDistance(Fromsuburbid,FromsuburbName,Tosuburbid,Tosuburbname,RentalValue,Distance)
+     VALUES (@GeoAltKey,@fromsuburb,@RentalMedianAltKey,@Suburb,@RentValue,@nearestdistance);
+     FETCH NEXT FROM Rental_Cursor into @RentalMedianAltKey, @Suburb, @RentValue, @nearestdistance;
+  END;
+CLOSE Rental_Cursor;
+Deallocate Rental_Cursor;
+    Fetch Next From FromSuburb_Cursor into @GeoAltKey, @fromsuburb, @fromsuburblat,@fromsuburblong;
+END;
+Close FromSuburb_Cursor;
+Deallocate FromSuburb_Cursor;
+END
+
