@@ -1,0 +1,54 @@
+USE [PropertyDW_Advanced]
+GO
+
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+
+ALTER proc [dbo].[CalculateDistanceSubToSchool]
+AS 
+begin
+
+declare @GeoAltKey int;
+declare @fromsuburb nvarchar(50);
+declare @fromsuburblat float;
+declare @fromsuburblong float;
+declare @GeoDistance geography;
+declare FromSuburb_Cursor cursor for select distinct 
+g.geographyAltkey,g.Suburb,g.Latitude,g.Longitude
+from DimGeography g order by g.GeographyAltKey;
+
+open FromSuburb_Cursor;
+Fetch Next From FromSuburb_Cursor into @GeoAltKey, @fromsuburb, @fromsuburblat,@fromsuburblong;
+while @@FETCH_STATUS=0
+begin
+set @GeoDistance=Geography::Point(@fromsuburblat,@fromsuburblong,4326);
+
+Declare @SchoolAltKey int;
+declare @SchoolName nvarchar(50);
+declare @SchoolSuburb nvarchar(50);
+declare @nearestdistance float;
+declare School_Cursor cursor for select distinct 
+s.SchoolAltKey, s.SchoolName,s.Suburb,
+(@GeoDistance.STDistance(geography::Point(ISNULL(s.Latitude,0),ISNULL(s.Longitude,0),4326)))/1000 AS distance
+FROM DimAuLocalSchool s
+Where (@GeoDistance.STDistance(geography::Point(ISNULL(s.Latitude,0),ISNULL(s.Longitude,0),4326)))/1000>0 AND
+(@GeoDistance.STDistance(geography::Point(ISNULL(s.Latitude,0),ISNULL(s.Longitude,0),4326)))/1000<=1
+
+OPEN School_Cursor;
+Fetch Next from School_Cursor into @SchoolAltKey, @SchoolName, @SchoolSuburb, @nearestdistance;
+while @@FETCH_STATUS=0
+Begin
+insert into SuburbDistance(Fromsuburbid,FromsuburbName,Tosuburbid,Tosuburbname,School,Distance)
+values (@GeoAltKey,@fromsuburb,@SchoolAltKey,@SchoolSuburb,@SchoolName,@nearestdistance);
+Fetch Next from School_Cursor into @SchoolAltKey, @SchoolName, @SchoolSuburb, @nearestdistance;
+END;
+Close School_Cursor;
+Deallocate School_Cursor;
+Fetch Next From FromSuburb_Cursor into @GeoAltKey, @fromsuburb, @fromsuburblat,@fromsuburblong;
+END;
+Close FromSuburb_Cursor;
+Deallocate FromSuburb_Cursor;
+END
+
