@@ -7,6 +7,8 @@ Technology: SQL, SSIS, Power BI, SSRS
 
 Development methodology: Agile Methodology
 
+Project Management tool: JIRA
+
 Outcome:
 
 1 Standardize the dataset, trasform data from multiple data sources, ensure the accuracy and intergrity of relevant datasets
