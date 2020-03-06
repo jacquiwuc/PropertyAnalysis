@@ -7,6 +7,8 @@ Technology: SQL, SSIS, Power BI, SSRS
 
 Development methodology: Agile Scrum Framework
 
+User story and refinement->Ranked list of what is required: features, stories->Team selects starting at stop as much as it can commit to deliver by end of sprint->Task breakout->Daily discussion between team members->Sprint end date and team deliverable do not change->Sprint review, finished work and sprint retrospective
+
 Project Management tool: JIRA
 
 Outcome:
