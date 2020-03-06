@@ -5,7 +5,7 @@ A cloud-based property investment and management platform we are creating to lin
 
 Technology: SQL, SSIS, Power BI, SSRS
 
-Development methodology: Agile Methodology
+Development methodology: Agile Scrum Framework
 
 Project Management tool: JIRA
 
